@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お弁当メニュー</title>
+<style>
+  /* =============================================
+     デザイン変更ガイド
+     =============================================
+
+     【色を変えたい】
+     --color-accent      : タブの下線・追加ボタンの色（今は緑）
+     --color-bg          : ページ全体の背景色
+     --color-surface     : カードや管理パネルの背景色
+     --color-text        : 本文テキストの色
+     --color-text-muted  : 薄いテキスト（ラベルなど）
+     --color-border      : 枠線の色
+
+     例）和風にしたい場合:
+       --color-accent: #8B4513;   ← 茶色系に
+       --color-bg: #FDF6EC;       ← 温かみのある白に
+
+     【フォントを変えたい】
+     --font-main の部分を変更してください。
+
+     【角丸を変えたい】
+     --radius-sm / --radius-md / --radius-lg の数値を変えてください。
+     0px にするとシャープな印象になります。
+
+     【パスワードを変えたい】
+     JavaScript の ADMIN_PASSWORD の値を変更してください。
+
+  ============================================= */
+
+  :root {
+    --color-accent: #1D9E75;
+    --color-bg: #F8F8F6;
+    --color-surface: #FFFFFF;
+    --color-surface-2: #F2F2EF;
+    --color-text: #1A1A1A;
+    --color-text-muted: #888780;
+    --color-border: rgba(0,0,0,0.12);
+    --font-main: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-main);
+    background: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+  }
+
+  .header {
+    background: var(--color-surface);
+    border-bottom: 0.5px solid var(--color-border);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .header h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--color-text);
+    letter-spacing: 0.02em;
+  }
+
+  /* パスワード入力欄（ヘッダー右側） */
+  .pw-input {
+    font-size: 13px;
+    padding: 6px 10px;
+    width: 90px;
+    border: 0.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-text);
+    outline: none;
+    font-family: var(--font-main);
+    text-align: center;
+    letter-spacing: 0.1em;
+  }
+  .pw-input:focus { border-color: var(--color-accent); }
+  .pw-input.unlocked {
+    border-color: var(--color-accent);
+    background: #E1F5EE;
+    color: #0F6E56;
+  }
+
+  .tabs {
+    background: var(--color-surface);
+    display: flex;
+    border-bottom: 0.5px solid var(--color-border);
+  }
+  .tab {
+    flex: 1;
+    padding: 12px 4px;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab.active {
+    color: var(--color-accent);
+    font-weight: 600;
+    border-bottom: 2px solid var(--color-accent);
+  }
+
+  .content {
+    padding: 16px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .img-card {
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--color-border);
+    overflow: hidden;
+    background: var(--color-surface);
+    position: relative;
+    cursor: pointer;
+  }
+  .img-card img, .img-card iframe {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+    border: none;
+  }
+  .img-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    padding: 6px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .del-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .empty-icon {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  /* 管理パネル */
+  .add-panel {
+    margin-top: 20px;
+    border: 0.5px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    background: var(--color-surface);
+  }
+  .add-panel h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--color-text);
+  }
+  .add-type-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .add-type-tab {
+    font-size: 13px;
+    padding: 6px 14px;
+    border: 0.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    background: transparent;
+    color: var(--color-text-muted);
+    transition: all 0.15s;
+  }
+  .add-type-tab.active {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+  }
+  .add-panel input[type=text] {
+    width: 100%;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 0.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-text);
+    margin-bottom: 8px;
+    outline: none;
+    font-family: var(--font-main);
+  }
+  .add-panel input[type=text]:focus { border-color: var(--color-accent); }
+  .file-label {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--color-text-muted);
+    border: 0.5px dashed var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin-bottom: 8px;
+    background: var(--color-bg);
+  }
+  input[type=file] { display: none; }
+  .add-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--color-accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-main);
+    transition: opacity 0.15s;
+  }
+  .add-btn:active { opacity: 0.8; }
+  .preview-img {
+    width: 100%;
+    max-height: 160px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    border: 0.5px solid var(--color-border);
+  }
+
+  /* ライトボックス（画像拡大表示） */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox-inner {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox img {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: var(--radius-md);
+    object-fit: contain;
+    display: block;
+  }
+  .lightbox iframe {
+    width: min(90vw, 800px);
+    height: min(80vh, 600px);
+    border: none;
+    border-radius: var(--radius-md);
+  }
+  .lightbox-close {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox-label {
+    position: fixed;
+    bottom: 20px;
+    left: 0; right: 0;
+    text-align: center;
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>お弁当メニュー</h1>
+  <!-- パスワード入力欄。正しく入力すると管理モードになります -->
+  <input
+    type="password"
+    class="pw-input"
+    id="pwInput"
+    placeholder="管理者"
+    maxlength="10"
+    oninput="checkPassword(this)"
+    autocomplete="off"
+  />
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab(0)">倉敷</div>
+  <div class="tab" onclick="switchTab(1)">矢掛</div>
+  <div class="tab" onclick="switchTab(2)">締め切り・値段</div>
+</div>
+
+<div class="content">
+  <div id="imagesArea"></div>
+
+  <div id="addPanel" class="add-panel" style="display:none">
+    <h3>＋ 画像を追加</h3>
+    <div class="add-type-tabs">
+      <button class="add-type-tab active" id="urlTabBtn" onclick="switchAddType('url')">URL (PDF対応)</button>
+      <button class="add-type-tab" id="photoTabBtn" onclick="switchAddType('photo')">写真をアップ</button>
+    </div>
+    <div id="urlSection">
+      <input type="text" id="urlField" placeholder="画像またはPDFのURLを入力" />
+      <input type="text" id="labelField" placeholder="ラベル（任意）" />
+      <button class="add-btn" onclick="addFromUrl()">追加する</button>
+    </div>
+    <div id="photoSection" style="display:none">
+      <label class="file-label" for="fileInput">
+        &#128247; スマホから写真を選択・撮影
+      </label>
+      <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="addFromFile(this)" />
+      <img id="previewImg" class="preview-img" style="display:none" alt="プレビュー" />
+    </div>
+  </div>
+</div>
+
+<!-- ライトボックス -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <div class="lightbox-inner" id="lightboxInner"></div>
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="閉じる">&#x2715;</button>
+  <div class="lightbox-label" id="lightboxLabel"></div>
+</div>
+
+<script>
+  // 【パスワードを変えたい場合】ここの '5555' を変更してください
+  const ADMIN_PASSWORD = '5555';
+
+  let currentTab = 0;
+  let isAdmin = false;
+  let addType = 'url';
+  const data = { 0: [], 1: [], 2: [] };
+
+  function checkPassword(input) {
+    const val = input.value;
+    if (val === ADMIN_PASSWORD) {
+      isAdmin = true;
+      input.classList.add('unlocked');
+      document.getElementById('addPanel').style.display = 'block';
+      render();
+    } else {
+      isAdmin = false;
+      input.classList.remove('unlocked');
+      document.getElementById('addPanel').style.display = 'none';
+      render();
+    }
+  }
+
+  function switchTab(i) {
+    currentTab = i;
+    document.querySelectorAll('.tab').forEach((t, idx) => t.classList.toggle('active', idx === i));
+    render();
+  }
+
+  function switchAddType(type) {
+    addType = type;
+    document.getElementById('urlTabBtn').classList.toggle('active', type === 'url');
+    document.getElementById('photoTabBtn').classList.toggle('active', type === 'photo');
+    document.getElementById('urlSection').style.display = type === 'url' ? 'block' : 'none';
+    document.getElementById('photoSection').style.display = type === 'photo' ? 'block' : 'none';
+  }
+
+  function render() {
+    const items = data[currentTab];
+    const area = document.getElementById('imagesArea');
+    if (items.length === 0) {
+      const msg = isAdmin ? '下の「画像を追加」から登録できます' : 'まだメニューがありません';
+      area.innerHTML = `<div class="empty"><span class="empty-icon">&#127857;</span>${msg}</div>`;
+      return;
+    }
+    area.innerHTML = `<div class="images-grid">${items.map((item, i) => `
+      <div class="img-card" onclick="openLightbox(${i})">
+        ${item.type === 'pdf'
+          ? `<iframe src="${item.src}" title="${item.label || 'PDF'}"></iframe>`
+          : `<img src="${item.src}" alt="${item.label || 'メニュー画像'}" loading="lazy" />`}
+        ${item.label ? `<div class="img-label">${item.label}</div>` : ''}
+        ${isAdmin ? `<button class="del-btn" onclick="event.stopPropagation();deleteItem(${i})" aria-label="削除">&#x2715;</button>` : ''}
+      </div>`).join('')}
+    </div>`;
+  }
+
+  function openLightbox(i) {
+    const item = data[currentTab][i];
+    const inner = document.getElementById('lightboxInner');
+    if (item.type === 'pdf') {
+      inner.innerHTML = `<iframe src="${item.src}" title="${item.label || 'PDF'}"></iframe>`;
+    } else {
+      inner.innerHTML = `<img src="${item.src}" alt="${item.label || 'メニュー画像'}" />`;
+    }
+    document.getElementById('lightboxLabel').textContent = item.label || '';
+    document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox(e) {
+    if (e && e.target !== document.getElementById('lightbox') && !e.target.classList.contains('lightbox-close')) return;
+    document.getElementById('lightbox').classList.remove('open');
+    document.getElementById('lightboxInner').innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  function addFromUrl() {
+    const url = document.getElementById('urlField').value.trim();
+    if (!url) { alert('URLを入力してください'); return; }
+    const label = document.getElementById('labelField').value.trim();
+    const isPdf = url.toLowerCase().includes('.pdf');
+    data[currentTab].push({ src: url, label, type: isPdf ? 'pdf' : 'image' });
+    document.getElementById('urlField').value = '';
+    document.getElementById('labelField').value = '';
+    render();
+  }
+
+  function addFromFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const preview = document.getElementById('previewImg');
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      data[currentTab].push({ src: e.target.result, label: file.name, type: 'image' });
+      render();
+      setTimeout(() => { preview.style.display = 'none'; }, 1500);
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  function deleteItem(i) {
+    if (!confirm('この画像を削除しますか？')) return;
+    data[currentTab].splice(i, 1);
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>
